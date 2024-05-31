@@ -29,7 +29,7 @@ spec:
       service:
         annotations:
           external-dns.alpha.kubernetes.io/hostname: "talos-test.${SECRET_DOMAIN}"
-          io.cilium/lb-ipam-ips: "#{ bootstrap_cloudflare.tunnel.ingress_vip }#"
+          io.cilium/lb-ipam-ips: "192.168.13.7"
         externalTrafficPolicy: Cluster
       ingressClassResource:
         name: external
@@ -67,11 +67,7 @@ spec:
           namespaceSelector:
             any: true
       extraArgs:
-        #% if bootstrap_cloudflare.acme.production %#
-        default-ssl-certificate: "network/${SECRET_DOMAIN/./-}-production-tls"
-        #% else %#
         default-ssl-certificate: "network/${SECRET_DOMAIN/./-}-staging-tls"
-        #% endif %#
       resources:
         requests:
           cpu: 100m
