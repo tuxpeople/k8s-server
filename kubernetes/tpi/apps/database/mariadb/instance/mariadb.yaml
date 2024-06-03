@@ -7,7 +7,7 @@ spec:
   rootPasswordSecretKeyRef:
     name: mariadb
     key: root-password
-  image: mariadb:11.3.2
+  image: mariadb:11.4.2
   port: 3306
   replicas: 2
   replication:
