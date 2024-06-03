@@ -26,7 +26,7 @@ spec:
       repository: docker.io/bitpoke/mysql-operator
       pullPolicy: IfNotPresent
       # Overrides the image tag whose default is the chart appVersion.
-      # tag: ""
+      tag: "0.7.0-amd64"
     rbac:
       # Specifies whether RBAC resources should be created
       create: true
