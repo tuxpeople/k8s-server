@@ -1,0 +1,18 @@
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: phpipam
+spec:
+  mariaDbRef:
+    name: mariadb
+    namespace: database
+  privileges:
+    - "ALL"
+  database: "phpipam"
+  table: "*"
+  username: phpipam
+  grantOption: true
+  host: "%"
+  requeueInterval: 30s
+  retryInterval: 5s

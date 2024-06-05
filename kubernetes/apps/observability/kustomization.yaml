@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./namespace.yaml
+  - ./alertmanager-discord/ks.yaml
+  - ./kube-prometheus-stack/ks.yaml
+  - ./kubernetes-dashboard/ks.yaml
+  - ./vpa/ks.yaml
+  - ./grafana/ks.yaml
+  - ./goldilocks/ks.yaml
+  - ./prometheus-operator-crds/ks.yaml
+  - ./gatus/ks.yaml
+  - ./vector/ks.yaml
+  - ./unpoller/ks.yaml
+  - ./prometheus-pushgateway/ks.yaml

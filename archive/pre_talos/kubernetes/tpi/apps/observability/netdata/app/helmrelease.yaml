@@ -1,0 +1,68 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: netdata
+  namespace: observability
+spec:
+  interval: 30m
+  timeout: 15m
+  chart:
+    spec:
+      chart: netdata
+      version: 3.7.90
+      sourceRef:
+        kind: HelmRepository
+        name: netdata
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    ingress:
+      enabled: true
+      annotations:
+        kubernetes.io/ingress.class: nginx-default
+      path: /
+      pathType: Prefix
+      hosts:
+        - &host netdata.${SECRET_DOMAIN}
+      tls:
+        - secretName: "${SECRET_DOMAIN/./-}-production-tls"
+          hosts:
+            - *host
+    env:
+      TZ: ${TIMEZONE}
+    child:
+      configs:
+        sonarr-exporter:
+          enabled: true
+          path: /etc/netdata/go.d/sonarr-exporter.conf
+          data: |
+            update_every: 1
+            autodetection_retry: 0
+            jobs:
+              - url: http://sonarr-exporter.media.svc.cluster.local:9707/metrics
+    # parent:
+    #   enabled: true
+    #   alarms:
+    #     storageclass: "${MAIN_SC}"
+    #   database:
+    #     storageclass: "${MAIN_SC}"
+
+    # child:
+    #   enabled: false
+
+    # k8sState:
+    #   enabled: false

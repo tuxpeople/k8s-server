@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app netdata
+  namespace: flux-system
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: ${STORAGE_KUST}
+    - name: vpa
+  targetNamespace: observability
+  path: ./kubernetes/apps/observability/netdata/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: k8s-homelab
+  wait: true
+  interval: 30m
+  retryInterval: 1m
+  timeout: 5m

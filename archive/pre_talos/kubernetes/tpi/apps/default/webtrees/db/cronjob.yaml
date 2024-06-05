@@ -1,0 +1,53 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: webtrees-db-mariadb
+spec:
+  suspend: false
+  schedule: "@daily"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: alpine
+              image: alpine
+              env:
+                - name: DATABASES
+                  value: webtrees
+                - name: MARIADB_HOST
+                  value: webtrees-db-mariadb
+                - name: MARIADB_USER
+                  value: root
+                - name: MYSQL_PWD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mariadb-secret
+                      key: mariadb-root-password
+              command:
+                - /bin/sh
+              args:
+                - -c
+                - |
+                  set -xe
+                  DATE=$(date +%Y-%m-%d)
+                  apk update
+                  apk add mysql-client py-pip
+                  mkdir -p /var/nfs/webtrees-db/$DATE
+                  cd /var/nfs/webtrees-db
+                  for DATABASE in $${DATABASES}; do
+                    mysqldump -h $MARIADB_HOST -u $MARIADB_USER $DATABASE | gzip > $DATE/$DATABASE.sql.gz
+                  done
+              volumeMounts:
+                - name: nfs-vol
+                  mountPath: /var/nfs
+          restartPolicy: OnFailure
+          volumes:
+            - name: nfs-vol
+              nfs:
+                server: 10.20.30.40
+                path: /volume2/data/backup/kubernetes

@@ -1,0 +1,90 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app longhorn
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: longhorn
+      version: 1.6.2
+      sourceRef:
+        kind: HelmRepository
+        name: longhorn
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    persistence:
+      defaultClass: true
+      defaultClassReplicaCount: 2
+      defaultFsType: ext4
+      reclaimPolicy: Delete
+      # recurringJobs:
+      #   enable: true
+      #   jobList:
+      #     '[{"name":"daily", "task":"backup", "cron":"0 6 * * ?", "retain":3,"labels":
+      #     {"interval":"daily"}}]'
+    defaultSettings:
+      backupstorePollInterval: 300
+      backupTarget: nfs://10.20.30.40:/volume2/data/backup/kubernetes/longhorn-backup
+      snapshotDataIntegrity: "fast-check"
+      defaultDataPath: /var/lib/longhorn
+      defaultDataLocality: best-effort
+      replicaAutoBalance: best-effort
+      staleReplicaTimeout: "30"
+      defaultReplicaCount: 2
+      defaultLonghornStaticStorageClass: longhorn
+      createDefaultDiskLabeledNodes: false
+      nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+      concurrentAutomaticEngineUpgradePerNodeLimit: 1
+      storageMinimalAvailablePercentage: 10
+      StorageOverProvisioningPercentage: 110
+      # taintToleration: "node-role.kubernetes.io/master=true:NoSchedule"
+      # upgradeChecker: true
+    ingress:
+      enabled: true
+      ingressClassName: nginx-default
+      host: longhorn.${SECRET_DOMAIN}
+      tlsSecret: ${SECRET_DOMAIN/./-}-production-tls
+      tls: true
+      path: /
+      annotations:
+        hajimari.io/enable: "true"
+        hajimari.io/icon: cow
+        hajimari.io/appName: Longhorn
+        hajimari.io/group: "storage"
+        # hajimari.io/targetBlank: "true"
+        # hajimari.io/info: "Storage"
+    # longhornManager:
+    #   tolerations:
+    #     - key: node-role.kubernetes.io/master
+    #       operator: Equal
+    #       value: "true"
+    #       effect: NoSchedule
+    # longhornDriver:
+    #   tolerations:
+    #     - key: node-role.kubernetes.io/master
+    #       operator: Equal
+    #       value: "true"
+    #       effect: NoSchedule
+    # longhornUI:
+    #   tolerations:
+    #     - key: node-role.kubernetes.io/master
+    #       operator: Equal
+    #       value: "true"
+    #       effect: NoSchedule

@@ -1,0 +1,25 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app: phpipam
+  name: phpipam
+  annotations:
+    hajimari.io/enable: "true"
+spec:
+  tls:
+    - secretName: ${SECRET_DOMAIN/./-}-production-tls
+      hosts:
+        - phpipam.${SECRET_DOMAIN}
+  rules:
+    - host: phpipam.${SECRET_DOMAIN}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: phpipam
+                port:
+                  number: 80

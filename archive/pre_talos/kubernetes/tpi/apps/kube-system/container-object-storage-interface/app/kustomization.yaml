@@ -1,0 +1,11 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kube-system
+resources:
+  - https://github.com/kubernetes-sigs/container-object-storage-interface-api
+  - https://github.com/kubernetes-sigs/container-object-storage-interface-controller
+images:
+  - name: gcr.io/k8s-staging-sig-storage/objectstorage-controller
+    newTag: v20240502-v0.1.2-alpha1-8-g7e7b773

@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resource-policy
+data:
+  template.yaml: |
+    version: v1
+    volumePolicies:
+    - conditions:
+        csi:
+          driver: nfs.csi.k8s.io
+        storageClass:
+        - csi-nfs
+      action:
+        type: skip

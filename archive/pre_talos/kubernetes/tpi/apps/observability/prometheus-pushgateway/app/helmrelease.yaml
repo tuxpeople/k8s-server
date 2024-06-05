@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus-pushgateway
+  namespace: observability
+spec:
+  interval: 30m
+  timeout: 15m
+  chart:
+    spec:
+      chart: prometheus-pushgateway
+      version: 2.12.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: prometheus-pushgateway
+    ingress:
+      enabled: true
+      annotations:
+        hajimari.io/enable: "true"
+        hajimari.io/appName: Prometheus Pushgateway
+        hajimari.io/icon: mdi:fire
+      ingressClassName: nginx-default
+      tls:
+        - secretName: ${SECRET_DOMAIN/./-}-production-tls
+          hosts:
+            - prometheus-pushgateway.int.${SECRET_DOMAIN}
+      hosts:
+        - prometheus-pushgateway.int.${SECRET_DOMAIN}

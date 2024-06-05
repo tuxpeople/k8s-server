@@ -1,0 +1,111 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app minecraft-server-creative
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: minecraft-bedrock
+      version: 2.8.0
+      sourceRef:
+        kind: HelmRepository
+        name: minecraft-server-charts
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    persistence:
+      storageClass: ${MAIN_SC}
+      dataDir:
+        enabled: true
+        Size: 5Gi
+    resources:
+      requests:
+        cpu: 750m
+        memory: 750Mi
+      limits:
+        memory: 3Gi
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 120
+      periodSeconds: 5
+      failureThreshold: 10
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 120
+      periodSeconds: 5
+      failureThreshold: 10
+    startupProbe:
+      enabled: true
+      failureThreshold: 120
+      periodSeconds: 10
+      initialDelaySeconds: 120
+    extraEnv:
+      ENABLE_AUTOPAUSE: false
+      TZ: ${TIMEZONE}
+    minecraftServer:
+      eula: "TRUE"
+      version: LATEST
+      enableLanVisibility: false
+      serviceType: LoadBalancer
+      loadBalancerIP: ${CILIUM_LB_MINECRAFT1_ADDR}
+      externalTrafficPolicy: Cluster
+      onlineMode: false
+      gameMode: survival
+      # The world is ticked this many chunks away from any player.
+      tickDistance: 4
+      # Max view distance (in chunks).
+      viewDistance: 10
+      difficulty: peaceful
+      icon: https://www.freeiconspng.com/uploads/minecraft-server-icon-13.png
+      serverName: Thomas' Creative Server
+      levelName: world
+      # memory: 2048M
+      enableSSH: true
+    rcon:
+      enabled: false
+    extraVolumes:
+      - volumeMounts:
+        volumes:
+          - name: nfs
+            nfs:
+              server: 10.20.30.40
+              path: /volume2/data/backup/kubernetes/mc-backup/minecraft-server-creative
+  postRenderers:
+    # Instruct helm-controller to use built-in "kustomize" post renderer.
+    - kustomize:
+        patchesJson6902:
+          - patch:
+              - op: add
+                path: /spec/template/spec/containers/-
+                value:
+                  image: registry.eighty-three.me/tuxpeople/bedrockifier:rolling
+                  imagePullPolicy: Always
+                  name: backup
+                  resources: {}
+                  env:
+                    - name: TZ
+                      value: ${TIMEZONE}
+                  volumeMounts:
+                    - mountPath: /data
+                      name: datadir
+                    - mountPath: /backups
+                      name: nfs
+            target:
+              kind: Deployment
+              name: minecraft-server-creative-minecraft-bedrock

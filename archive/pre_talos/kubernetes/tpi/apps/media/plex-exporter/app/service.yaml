@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: plex-exporter
+  name: plex-exporter-svc
+spec:
+  ports:
+    - name: metrics
+      port: 9567
+      protocol: TCP
+      targetPort: 9567
+  selector:
+    app: plex-exporter
+  type: ClusterIP

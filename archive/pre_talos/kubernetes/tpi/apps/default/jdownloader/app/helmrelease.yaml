@@ -1,0 +1,88 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app jdownloader
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: 3.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      app:
+        containers:
+          main:
+            image:
+              repository: registry.eighty-three.me/tuxpeople/jdownloader-headless
+              tag: pr-71
+              pullPolicy: Always
+            resources:
+              requests:
+                cpu: 150m
+                memory: 250Mi
+              limits:
+                memory: 1750Mi
+            env:
+              TZ: ${TIMEZONE}
+              PUID: 100
+              PGID: 101
+              MYJD_DEVICE_NAME: Test
+              XDG_DOWNLOAD_DIR: /downloads
+            envFrom:
+              - secretRef:
+                  name: jd-secret
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 100
+        runAsGroup: 101
+        fsGroup: 101
+    service:
+      app:
+        controller: app
+        ports:
+          http:
+            port: &port 3129
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        storageClass: ${MAIN_SC}
+        globalMounts:
+          - path: /opt/JDownloader/cfg
+      downloads:
+        enabled: true
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        storageClass: ${MAIN_SC}

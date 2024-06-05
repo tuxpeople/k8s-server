@@ -1,0 +1,110 @@
+[server]
+port = 8080
+hostname = "https://podsync.${SECRET_DOMAIN}"
+
+[storage]
+  [storage.local]
+    data_dir = "/data"
+
+[database]
+badger = { truncate = true, file_io = true }
+
+[tokens]
+youtube = "${SECRET_YOUTUBE_TOKEN}"
+
+[feeds]
+  [feeds.DevOpsToolkit]
+  url = "https://www.youtube.com/playlist?list=UUfz8x0lVzJpb_dgWm9kPVrw"
+  update_period = "8h"
+  format = "video"
+  quality = "high"
+  page_size = 15
+  clean = { keep_last = 15 }
+
+  [feeds.TechWorldWithNana]
+  url = "https://www.youtube.com/channel/UCdngmbVKX1Tgre699-XLlUA"
+  update_period = "8h"
+  format = "video"
+  quality = "high"
+  page_size = 15
+  clean = { keep_last = 15 }
+
+  [feeds.bares]
+  url = "https://www.youtube.com/channel/UC53bIpnef1pwAx69ERmmOLA"
+  update_period = "8h"
+  format = "video"
+  quality = "high"
+  page_size = 10
+  clean = { keep_last = 10 }
+
+  [feeds.headlock_breaking]
+  url = "https://www.youtube.com/channel/UC4A1tkY5mw9MWYa9SnDi3CQ"
+  filters = { title = "(B|b)(R|r)(E|e)(A|a)(K|k)(I|i)(N|n)(G|g)" }
+  custom = { title = "Headlock Breaking News" }
+  update_period = "6h"
+  format = "audio"
+  quality = "high"
+  page_size = 5
+  clean = { keep_last = 5 }
+
+  [feeds.lffs]
+  url = "https://www.youtube.com/playlist?list=PLDLU7Rp1Fecmx3mjQJU97rn5gfV8NH8AW"
+  update_period = "9h"
+  format = "video"
+  quality = "high"
+  page_size = 5
+  clean = { keep_last = 5 }
+
+  [feeds.mytowatch]
+  url = "https://youtube.com/playlist?list=PL7qBQ0Mi2xAp-alNW5mJ7z4X9Zko9rpWJ"
+  update_period = "7h"
+  format = "video"
+  quality = "high"
+  page_size = 30
+  clean = { keep_last = 30 }
+
+  [feeds.oralsessions]
+  url = "https://www.youtube.com/playlist?list=PLquP20HDxBb19HgiRawKoiTkHtHT473qG"
+  custom = { title = "The Sessions x AEW" }
+  update_period = "12h"
+  format = "video"
+  quality = "high"
+  page_size = 5
+  clean = { keep_last = 5 }
+
+  [feeds.spotfight_others]
+  url = "https://www.youtube.com/channel/UCROVkXXxpp_wisE7YyrTYyQ"
+  filters = { not_title = "(HAUPTKAMPF|Review)" }
+  custom = { title = "Spotfight Alles Andere" }
+  update_period = "12h"
+  format = "video"
+  quality = "high"
+  page_size = 15
+  clean = { keep_last = 5 }
+
+  [feeds.spotfightnews]
+  url = "https://www.youtube.com/channel/UCdsHMu1VHhZ8SlrdUQa457w"
+  update_period = "1h"
+  format = "audio"
+  quality = "high"
+  page_size = 13
+  clean = { keep_last = 13 }
+
+  [feeds.yt_fotografieren]
+  url = "https://www.youtube.com/playlist?list=PL7qBQ0Mi2xApoNGSCObcehoOnw9S2YTpc"
+  update_period = "7h"
+  format = "video"
+  quality = "high"
+  page_size = 30
+  clean = { keep_last = 30 }
+
+  [feeds.yt_kubernetes]
+  url = "https://www.youtube.com/playlist?list=PL7qBQ0Mi2xApcBPl9Ve3RVBD6CgQKaDY4"
+  update_period = "5h"
+  format = "video"
+  quality = "high"
+  page_size = 30
+  clean = { keep_last = 30 }
+
+[downloader]
+self_update = true

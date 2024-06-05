@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    reloader.stakater.com/auto: "true"
+  labels:
+    app: plex-exporter
+  name: plex-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: plex-exporter
+  template:
+    metadata:
+      labels:
+        app: plex-exporter
+    spec:
+      containers:
+        - image: registry.eighty-three.me/tuxpeople/plex-exporter:nightly
+          command:
+            - /plex_exporter
+          args:
+            - --config
+            - /config.json
+          imagePullPolicy: Always
+          name: plex-exporter
+          ports:
+            - containerPort: 9567
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 10m
+              memory: 50Mi
+            limits:
+              cpu: 500m
+              memory: 500Mi
+          volumeMounts:
+            - mountPath: /config.json
+              name: plex-exporter-config
+              subPath: config.json
+      volumes:
+        - configMap:
+            items:
+              - key: config.json
+                mode: 420
+                path: config.json
+            name: plex-exporter-config
+          name: plex-exporter-config

@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kasm
+  # annotations:
+  # traefik.ingress.kubernetes.io/service.serversscheme: https
+  # traefik.ingress.kubernetes.io/service.serverstransport: networking-insecureskipverify@kubernetescrd
+spec:
+  externalName: kasm.vm.tdeutsch.ch
+  ports:
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 443
+  sessionAffinity: None
+  type: ExternalName

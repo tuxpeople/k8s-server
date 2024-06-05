@@ -1,0 +1,277 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: grafana
+      version: 7.3.11
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    assertNoLeakedSecrets: false
+    admin:
+      existingSecret: grafana-admin-secret
+    env:
+      GF_EXPLORE_ENABLED: true
+      GF_SERVER_ROOT_URL: https://grafana.${SECRET_DOMAIN}
+    grafana.ini:
+      analytics:
+        check_for_updates: false
+        check_for_plugin_updates: false
+      auth:
+        signout_redirect_url: https://auth.${SECRET_DOMAIN}/logout
+        oauth_auto_login: false
+      auth.generic_oauth:
+        enabled: true
+        name: Homelab Account
+        icon: signin
+        client_id: grafana
+        client_secret: ${SECRET_OIDC_CLIENT_SECRET_GRAFANA}
+        scopes: openid profile email groups
+        empty_scopes: false
+        auth_url: https://auth.${SECRET_DOMAIN}/api/oidc/authorization
+        token_url: https://auth.${SECRET_DOMAIN}/api/oidc/token
+        api_url: https://auth.${SECRET_DOMAIN}/api/oidc/userinfo
+        login_attribute_path: preferred_username
+        groups_attribute_path: groups
+        name_attribute_path: name
+        use_pkce: true
+      auth.generic_oauth.group_mapping:
+        role_attribute_path: |
+          contains(groups[*], 'applications_grafana_admins') && 'Admin' || contains(groups[*], 'applications_grafana') && 'Viewer'
+        org_id: 1
+      auth.basic:
+        enabled: false
+        # disable_login_form: false
+      auth.anonymous:
+        enabled: false
+        org_name: Homelab
+        org_id: 1
+        org_role: Viewer
+    dashboardProviders:
+      dashboardproviders.yaml:
+        apiVersion: 1
+        providers:
+          - name: default
+            orgId: 1
+            folder: ""
+            type: file
+            disableDeletion: false
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/default
+          - name: unpoller
+            orgId: 1
+            folder: "unpoller"
+            type: file
+            disableDeletion: false
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/unpoller
+          - name: apps
+            orgId: 1
+            folder: "apps"
+            type: file
+            disableDeletion: false
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/apps
+          - name: kubernetes
+            orgId: 1
+            folder: "kubernetes"
+            type: file
+            disableDeletion: false
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/kubernetes
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            access: proxy
+            url: http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090
+            isDefault: true
+          - name: Loki
+            type: loki
+            access: proxy
+            url: http://loki-read.observability.svc.cluster.local:3100
+          - name: Alertmanager
+            type: alertmanager
+            uid: alertmanager
+            access: proxy
+            url: http://alertmanager-operated.observability.svc.cluster.local:9093
+            jsonData:
+              implementation: prometheus
+    dashboards:
+      default:
+        alertmanager-alerts:
+          # renovate: dashboardName="OPEN ALERTS OF ALERTMANAGER"
+          gnetId: 12947
+          revision: 1
+          datasource: Alertmanager
+        external-dns:
+          # renovate: dashboardName="External DNS"
+          gnetId: 15038
+          revision: 3
+          datasource: Prometheus
+        node-exporter-full:
+          # renovate: dashboardName="Node Exporter Full"
+          gnetId: 1860
+          revision: 37
+          datasource: Prometheus
+        cert-manager:
+          url: https://raw.githubusercontent.com/monitoring-mixins/website/master/assets/cert-manager/dashboards/cert-manager.json
+          datasource: Prometheus
+        flux-cluster:
+          url: https://raw.githubusercontent.com/fluxcd/flux2-monitoring-example/main/monitoring/configs/dashboards/cluster.json
+          datasource: Prometheus
+        flux-control-plane:
+          url: https://raw.githubusercontent.com/fluxcd/flux2-monitoring-example/main/monitoring/configs/dashboards/control-plane.json
+          datasource: Prometheus
+        external-secrets:
+          url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/docs/snippets/dashboard.json
+          datasource: Prometheus
+        node-feature-discovery:
+          url: https://raw.githubusercontent.com/kubernetes-sigs/node-feature-discovery/master/examples/grafana-dashboard.json
+          datasource: Prometheus
+        miniflux:
+          url: https://raw.githubusercontent.com/miniflux/v2/main/contrib/grafana/dashboard.json
+          datasource: Prometheus
+      unpoller:
+        unifi-insights:
+          # renovate: dashboardName="UniFi-Poller: Client Insights - Prometheus"
+          gnetId: 11315
+          revision: 9
+          datasource: Prometheus
+        unifi-network-sites:
+          # renovate: dashboardName="UniFi-Poller: Network Sites - Prometheus"
+          gnetId: 11311
+          revision: 5
+          datasource: Prometheus
+        unifi-usw:
+          # renovate: dashboardName="UniFi-Poller: USW Insights - Prometheus"
+          gnetId: 11312
+          revision: 9
+          datasource:
+            - name: "DS_PROMETHEUS"
+              value: Prometheus
+        unifi-uap:
+          # renovate: dashboardName="UniFi-Poller: UAP Insights - Prometheus"
+          gnetId: 11314
+          revision: 10
+          datasource:
+            - name: "DS_PROMETHEUS"
+              value: Prometheus
+      apps:
+        octoprint:
+          url: https://raw.githubusercontent.com/tg44/OctoPrint-prometheus-Exporter/master/extras/octoprint-grafana.json
+          datasource: Prometheus
+        minio:
+          # renovate: dashboardName="MinIO Dashboard"
+          gnetId: 13502
+          revision: 26
+          datasource: Prometheus
+        sonarrv3:
+          # renovate: dashboardName="Sonarr v3"
+          gnetId: 12530
+          revision: 2
+          datasource: Prometheus
+        radarrv3:
+          # renovate: dashboardName="Radarr v3"
+          gnetId: 12896
+          revision: 1
+          datasource: Prometheus
+        mysql-overview:
+          # renovate: dashboardName="MySQL Overview"
+          gnetId: 7362
+          revision: 5
+          datasource: Prometheus
+        mysql-quickstart:
+          # renovate: dashboardName="MySQL Exporter Quickstart and Dashboard"
+          gnetId: 14057
+          revision: 1
+          datasource: Prometheus
+      kubernetes:
+        kubernetes-api-server:
+          # renovate: dashboardName="Kubernetes / System / API Server"
+          gnetId: 15761
+          revision: 16
+          datasource: Prometheus
+        kubernetes-coredns:
+          # renovate: dashboardName="Kubernetes / System / CoreDNS"
+          gnetId: 15762
+          revision: 18
+          datasource: Prometheus
+        kubernetes-global:
+          # renovate: dashboardName="Kubernetes / Views / Global"
+          gnetId: 15757
+          revision: 37
+          datasource: Prometheus
+        kubernetes-namespaces:
+          # renovate: dashboardName="Kubernetes / Views / Namespaces"
+          gnetId: 15758
+          revision: 34
+          datasource: Prometheus
+        kubernetes-nodes:
+          # renovate: dashboardName="Kubernetes / Views / Nodes"
+          gnetId: 15759
+          revision: 29
+          datasource: Prometheus
+        kubernetes-pods:
+          # renovate: dashboardName="Kubernetes / Views / Pods"
+          gNetId: 15760
+          revision: 21
+          datasource: Prometheus
+        kubernetes-volumes:
+          # renovate: dashboardName="K8s / Storage / Volumes / Cluster"
+          gnetId: 11454
+          revision: 14
+          datasource: Prometheus
+    sidecar:
+      dashboards:
+        enabled: true
+        searchNamespace: ALL
+      datasources:
+        enabled: true
+        searchNamespace: ALL
+    serviceMonitor:
+      enabled: true
+    ingress:
+      enabled: true
+      ingressClassName: nginx-default
+      annotations:
+        hajimari.io/icon: simple-icons:grafana
+      hosts:
+        - &host grafana.${SECRET_DOMAIN}
+      tls:
+        - hosts:
+            - *host
+    persistence:
+      enabled: true
+      storageClassName: ${MAIN_SC}
+    testFramework:
+      enabled: false

@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: media
+resources:
+  - bazarr-ingress.yaml
+  - gaps-ingress.yaml
+  - lldap-ingress.yaml
+  - sabnzbd-ingress.yaml
+  - prowlarr-ingress.yaml
+  - radarr-ingress.yaml
+  - service.yaml
+  - sonar-ingress.yaml
+  - notifiarr-ingress.yaml
+  - radarr-exporter.yaml
+  - sonarr-exporter.yaml
+  - prowlarr-exporter.yaml

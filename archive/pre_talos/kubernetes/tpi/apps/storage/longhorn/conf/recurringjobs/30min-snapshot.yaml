@@ -1,0 +1,13 @@
+---
+apiVersion: longhorn.io/v1beta1
+kind: RecurringJob
+metadata:
+  name: 30min-snapshot
+spec:
+  name: 30min-snapshot
+  concurrency: 2
+  cron: 0/30 * * * *
+  groups:
+    - normal
+  retain: 4
+  task: snapshot

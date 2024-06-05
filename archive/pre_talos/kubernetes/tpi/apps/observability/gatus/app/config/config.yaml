@@ -1,0 +1,47 @@
+---
+# Note: Gatus vars should be escaped with $${VAR_NAME} to avoid interpolation by Flux
+web:
+  port: $${CUSTOM_WEB_PORT}
+metrics: true
+debug: true
+storage:
+  type: sqlite
+  path: /data/data.db
+ui:
+  title: Status | Gatus
+  header: Status
+connectivity:
+  checker:
+    target: 1.1.1.1:53
+    interval: 1m
+alerting:
+  discord:
+    webhook-url: $${GATUS_DISCORD_WEBHOOK}
+    default-alert:
+      # description: "health check failed"
+      send-on-resolved: true
+      failure-threshold: 2
+      success-threshold: 2
+endpoints:
+  - name: status
+    group: external
+    url: https://status.${SECRET_DOMAIN}
+    interval: 1m
+    ui:
+      hide-hostname: true
+      hide-url: true
+    client:
+      dns-resolver: tcp://1.1.1.1:53
+    conditions:
+      - "[STATUS] == 200"
+  - name: flux-webhook
+    group: external
+    url: https://flux-webhook.${SECRET_DOMAIN}
+    interval: 1m
+    ui:
+      hide-hostname: true
+      hide-url: true
+    client:
+      dns-resolver: tcp://1.1.1.1:53
+    conditions:
+      - "[STATUS] == 404"

@@ -1,0 +1,15 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: sftpgo-sftp
+  labels:
+    public: "true"
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: HostSNI(`*`)
+      services:
+        - name: vpn
+          port: 8888

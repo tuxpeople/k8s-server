@@ -1,0 +1,82 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phpipam-www
+  labels:
+    app: phpipam
+    component: www
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phpipam
+      component: www
+  template:
+    metadata:
+      labels:
+        app: phpipam
+        component: www
+    spec:
+      containers:
+        - name: phpipam-www
+          image: phpipam/phpipam-www:1.5x
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          env:
+            - name: TZ
+              value: ${TIMEZONE}
+            - name: IPAM_DATABASE_WEBHOST
+              value: '%'
+            - name: IPAM_DATABASE_NAME
+              value: phpipam
+            - name: IPAM_DATABASE_USER
+              value: phpipam
+            - name: IPAM_DATABASE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: phpipam-secret
+                  key: mariadb-password
+            - name: IPAM_DATABASE_HOST
+              value: mariadb-primary.database.svc.cluster.local
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phpipam-cron
+  labels:
+    app: phpipam
+    component: cron
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phpipam
+      component: cron
+  template:
+    metadata:
+      labels:
+        app: phpipam
+        component: cron
+    spec:
+      containers:
+        - name: phpipam-cron
+          image: phpipam/phpipam-cron:1.5x
+          env:
+            - name: TZ
+              value: ${TIMEZONE}
+            - name: SCAN_INTERVAL
+              value: 1h
+            - name: IPAM_DATABASE_NAME
+              value: phpipamdb
+            - name: IPAM_DATABASE_USER
+              value: phpipam
+            - name: IPAM_DATABASE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: phpipam-secret
+                  key: mariadb-password
+            - name: IPAM_DATABASE_HOST
+              value: phpipam-db-mariadb

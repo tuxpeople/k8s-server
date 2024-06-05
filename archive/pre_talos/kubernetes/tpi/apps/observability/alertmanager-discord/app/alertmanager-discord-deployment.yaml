@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager-discord
+  namespace: observability
+spec:
+  selector:
+    matchLabels:
+      app: alertmanager-discord
+  template:
+    metadata:
+      labels:
+        app: alertmanager-discord
+    spec:
+      containers:
+        - image: registry.eighty-three.me/tuxpeople/alertmanager-discord:rolling
+          imagePullPolicy: Always
+          name: main
+          ports:
+            - containerPort: 9094
+              name: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 10Mi
+            limits:
+              cpu: 20m
+              memory: 40Mi
+          env:
+            - name: DISCORD_WEBHOOK
+              valueFrom:
+                secretKeyRef:
+                  key: address
+                  name: discord-webhook

@@ -1,0 +1,16 @@
+---
+area/ansible:
+  - changed-files:
+      - any-glob-to-any-file: "ansible/**/*"
+area/github:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**/*"
+area/kubernetes:
+  - changed-files:
+      - any-glob-to-any-file: "kubernetes/**/*"
+area/terraform:
+  - changed-files:
+      - any-glob-to-any-file: "terraform/**/*"
+area/templates:
+  - changed-files:
+      - any-glob-to-any-file: "tmpl/**/*"

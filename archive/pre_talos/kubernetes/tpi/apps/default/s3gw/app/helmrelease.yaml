@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app s3gw
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: s3gw
+      version: 0.23.0
+      sourceRef:
+        kind: HelmRepository
+        name: s3gw-charts
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    publicDomain: s3gw.${SECRET_DOMAIN}
+    ui:
+      publicDomain: s3gw-ui.${SECRET_DOMAIN}
+    storageClass:
+      name: s3gw
+      create: true

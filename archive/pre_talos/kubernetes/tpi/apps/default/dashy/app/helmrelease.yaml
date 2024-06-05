@@ -1,0 +1,106 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app dashy
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: 3.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          main:
+            image:
+              repository: ghcr.io/lissy93/dashy
+              tag: 3.1.0
+            env:
+              TZ: ${TIMEZONE}
+              GID: 1000
+              UID: 1000
+              NODE_ENV: production
+            resources:
+              requests:
+                cpu: 5m
+                memory: 10Mi
+              limits:
+                memory: 2Gi
+    service:
+      app:
+        controller: app
+        ports:
+          http:
+            port: &port 80
+    ingress:
+      app:
+        enabled: true
+        className: nginx-default
+        annotations:
+          external-dns.alpha.kubernetes.io/target: ${SECRET_DNS_TARGET}
+          nginx.ingress.kubernetes.io/auth-method: GET
+          nginx.ingress.kubernetes.io/auth-url: https://auth.${SECRET_DOMAIN}/api/verify
+          nginx.ingress.kubernetes.io/auth-signin: https://auth.${SECRET_DOMAIN}?rm=$request_method
+          nginx.ingress.kubernetes.io/auth-response-headers: Remote-User,Remote-Name,Remote-Groups,Remote-Email
+          nginx.ingress.kubernetes.io/auth-snippet: |
+            proxy_set_header X-Forwarded-Method $request_method;
+            proxy_set_header X-Forwarded-Scheme $scheme;
+          hajimari.io/icon: file-arrow-up-down-outline
+        hosts:
+          - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: app
+                  port: *port
+        tls:
+          - hosts:
+              - *host
+            secretName: ${SECRET_DOMAIN/./-}-production-tls
+    persistence:
+      config:
+        enabled: true
+        type: secret
+        name: dashy-secret
+        globalMounts:
+          - path: /app/public/conf.yml
+            subPath: conf.yml
+            readOnly: true
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        storageClass: ${MAIN_SC}
+        advancedMounts:
+          app:
+            main:
+              - subPath: "icons"
+                path: "/app/public/item-icons"
+              - subPath: "backgrounds"
+                path: "/app/public/backgrounds"

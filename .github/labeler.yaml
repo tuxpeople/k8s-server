@@ -1,16 +1,14 @@
 ---
-area/ansible:
+area/bootstrap:
   - changed-files:
-      - any-glob-to-any-file: "ansible/**/*"
+      - any-glob-to-any-file: bootstrap/**/*
 area/github:
   - changed-files:
-      - any-glob-to-any-file: ".github/**/*"
+      - any-glob-to-any-file: .github/**/*
 area/kubernetes:
   - changed-files:
-      - any-glob-to-any-file: "kubernetes/**/*"
-area/terraform:
+      - any-glob-to-any-file: kubernetes/**/*
+area/taskfile:
   - changed-files:
-      - any-glob-to-any-file: "terraform/**/*"
-area/templates:
-  - changed-files:
-      - any-glob-to-any-file: "tmpl/**/*"
+      - any-glob-to-any-file: .taskfiles/**/*
+      - any-glob-to-any-file: Taskfile*

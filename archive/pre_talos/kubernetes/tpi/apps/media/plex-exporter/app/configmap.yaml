@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+data:
+  config.json: |
+    {
+    "exporter": {
+        "port": 9567
+      },
+      "server": {
+        "address": "plex.home",
+        "port": 32400,
+        "token": "${SECRET_PLEXTOKEN}"
+      }
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app: plex-exporter
+  name: plex-exporter-config

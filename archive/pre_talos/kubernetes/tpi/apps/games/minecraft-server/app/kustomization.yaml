@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: games
+resources:
+  - ./helmrelease-creative.yaml
+  # - ./helmrelease-family.yaml
+  # - ./helmrelease-survival.yaml
+  - ./helmrelease-insel.yaml
+  - ./monitoring.yaml
+  - ./backup-sa.yaml
+
+configMapGenerator:
+  - name: mc-backup-configmap
+    files:
+      - ./mc-backup.sh
+generatorOptions:
+  disableNameSuffixHash: true
+  annotations:
+    kustomize.toolkit.fluxcd.io/substitute: disabled

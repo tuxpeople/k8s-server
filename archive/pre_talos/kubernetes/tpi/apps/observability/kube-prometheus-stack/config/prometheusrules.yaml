@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homebrew-rules
+spec:
+  groups:
+    - name: homebrew
+      rules:
+        - alert: homebrew_outdated_formulas
+          expr: |
+            homebrew_outdated_formulaes > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            description: "There are upgradeable Homebrew formulas on {{$labels.instance}}"
+            summary: "Homebrew formulas can be upgraded"
+        - alert: homebrew_outdated_casks
+          expr: |
+            homebrew_outdated_casks > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            description: "There are upgradeable Homebrew casks on {{$labels.instance}}"
+            summary: "Homebrew casks can be upgraded"

@@ -1,0 +1,40 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: longhorn-iscsi-installation
+  labels:
+    app: longhorn-iscsi-installation
+  annotations:
+    command: &cmd sudo apt-get update -q -y && sudo apt-get install -q -y open-iscsi
+      && sudo systemctl -q enable iscsid && sudo systemctl start iscsid && sudo modprobe
+      iscsi_tcp && if [ $? -eq 0 ]; then echo "iscsi install successfully"; else echo
+      "iscsi install failed error code $?"; fi
+spec:
+  selector:
+    matchLabels:
+      app: longhorn-iscsi-installation
+  template:
+    metadata:
+      labels:
+        app: longhorn-iscsi-installation
+    spec:
+      hostNetwork: true
+      hostPID: true
+      initContainers:
+        - name: iscsi-installation
+          command:
+            - nsenter
+            - --mount=/proc/1/ns/mnt
+            - --
+            - bash
+            - -c
+            - *cmd
+          image: alpine:3.20
+          securityContext:
+            privileged: true
+      containers:
+        - name: sleep
+          image: registry.k8s.io/pause:3.10
+  updateStrategy:
+    type: RollingUpdate

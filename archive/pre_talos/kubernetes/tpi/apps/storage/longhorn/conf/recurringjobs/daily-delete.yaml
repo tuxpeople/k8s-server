@@ -1,0 +1,13 @@
+---
+apiVersion: longhorn.io/v1beta1
+kind: RecurringJob
+metadata:
+  name: daily-delete
+spec:
+  name: daily-delete
+  concurrency: 1
+  cron: 45 3 * * *
+  groups:
+    - normal
+  retain: 1
+  task: snapshot-delete

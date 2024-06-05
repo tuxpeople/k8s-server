@@ -1,0 +1,22 @@
+pageInfo:
+  title: Home Lab
+sections: # An array of sections
+  - name: Example Section
+    icon: far fa-rocket
+    items:
+      - title: GitHub
+        description: Dashy source code and docs
+        icon: fab fa-github
+        url: https://github.com/Lissy93/dashy
+      - title: Issues
+        description: View open issues, or raise a new one
+        icon: fas fa-bug
+        url: https://github.com/Lissy93/dashy/issues
+  - name: Local Services
+    items:
+      - title: Firewall
+        icon: favicon
+        url: http://192.168.1.1/
+      - title: Game Server
+        icon: https://i.ibb.co/710B3Yc/space-invader-x256.png
+        url: http://192.168.130.1/

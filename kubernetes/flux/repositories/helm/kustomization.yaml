@@ -1,0 +1,44 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - bjw-s.yaml
+  - coredns.yaml
+  - openebs.yaml
+  - postfinance.yaml
+  - spegel.yaml
+  - backube.yaml
+  - bitnami.yaml
+  - cilium.yaml
+  - crossplane.yaml
+  - csi-driver-nfs.yaml
+  - deliveryheroio.yaml
+  - democratic-csi.yaml
+  - external-dns.yaml
+  - external-secrets.yaml
+  - fairwinds.yaml
+  - grafana.yaml
+  - hajimari.yaml
+  - ingress-nginx.yaml
+  - jetstack.yaml
+  - k8s-gateway.yaml
+  - kubereboot.yaml
+  - kubernetes-dashboard.yaml
+  - kubernetes-sigs-descheduler-charts.yaml
+  - longhorn.yaml
+  - mariadb-operator.yaml
+  - metallb.yaml
+  - metrics-server.yaml
+  - minecraft-server-charts.yaml
+  - minio.yaml
+  - mittwald-charts.yaml
+  - netdata.yaml
+  - piraeus.yaml
+  - prometheus-community.yaml
+  - rancher.yaml
+  - s3gw-charts.yaml
+  - stakater.yaml
+  - traefik-charts.yaml
+  - vector-charts.yaml
+  - vmware-charts.yaml
+  - weave-gitops.yaml

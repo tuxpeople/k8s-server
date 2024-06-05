@@ -1,0 +1,95 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: code-server
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: 3.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      app:
+        replicas: 1
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: ghcr.io/linuxserver/code-server
+              tag: 4.89.1
+            env:
+              TZ: ${TIMEZONE}
+              PUID: 911
+              PGID: 911
+              PROXY_DOMAIN: code.${SECRET_DOMAIN}
+              PASSWORD: ${CODESERVER_PASSWORD}
+              DOCKER_MODS: linuxserver/mods:universal-git|linuxserver/mods:code-server-shellcheck|linuxserver/mods:code-server-terraform
+              DEFAULT_WORKSPACE: /config/workspace
+              # DOCKER_MODS: "linuxserver/mods:code-server-docker|linuxserver/mods:code-server-python3|linuxserver/mods:code-server-shellcheck|linuxserver/mods:code-server-terraform|linuxserver/mods:universal-git|linuxserver/mods:universal-tshoot|linuxserver/mods:universal-package-install"
+              # INSTALL_PACKAGES: "rsync|git|nginx"
+              # INSTALL_PIP_PACKAGES: "apprise"
+            # probes:
+            #   liveness:
+            #     enabled: true
+            #   readiness:
+            #     enabled: true
+            #   startup:
+            #     enabled: true
+    service:
+      app:
+        controller: app
+        ports:
+          http:
+            port: &port 8443
+    ingress:
+      app:
+        enabled: true
+        className: nginx-default
+        annotations:
+          kubernetes.io/ingress.class: nginx-default
+          # external-dns/is-public: "true"
+          # external-dns.alpha.kubernetes.io/target: ${SECRET_DNS_TARGET}
+        hosts:
+          - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: app
+                  port: *port
+        tls:
+          - hosts:
+              - *host
+            secretName: ${SECRET_DOMAIN/./-}-production-tls
+    persistence:
+      config:
+        enabled: true
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        storageClass: ${MAIN_SC}
+        globalMounts:
+          - path: /config
+# docker run --entrypoint /bin/sleep docker.io/fluxcd/flux-cli:v0.37.0 inf

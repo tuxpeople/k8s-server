@@ -1,0 +1,146 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paperless
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: 3.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          main:
+            image:
+              repository: ghcr.io/paperless-ngx/paperless-ngx
+              tag: 2.9.0
+            env:
+              PAPERLESS_SECRET_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: paperless-secret
+                    key: PAPERLESS_SECRET_KEY
+              PAPERLESS_URL: https://{{ .Release.Name }}.${SECRET_DOMAIN}
+              PAPERLESS_PORT: "8080"
+              PAPERLESS_TIME_ZONE: ${TIMEZONE}
+              PAPERLESS_WEBSERVER_WORKERS: "1"
+              PAPERLESS_TASK_WORKERS: "1"
+              PAPERLESS_TIKA_ENABLED: "1"
+              PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://paperless-gotenberg:3000
+              PAPERLESS_TIKA_ENDPOINT: http://paperless-tika:9998
+              PAPERLESS_FILENAME_FORMAT:
+                "{created_year}/{correspondent}/{created_year}-{created_month}-{created_day}
+                {title}"
+              # Configure Remote User auth
+              PAPERLESS_ENABLE_HTTP_REMOTE_USER: "true"
+              # Configure folders
+              PAPERLESS_CONSUMPTION_DIR: /nfs/consume
+              PAPERLESS_DATA_DIR: /nfs/data
+              PAPERLESS_EXPORT_DIR: /nfs/export
+              PAPERLESS_MEDIA_ROOT: /nfs/media
+              # Configure folder importer
+              PAPERLESS_CONSUMER_POLLING: "60"
+              PAPERLESS_CONSUMER_RECURSIVE: "true"
+              PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS: "true"
+              # Configure OCR
+              PAPERLESS_OCR_LANGUAGES: deu eng
+              PAPERLESS_OCR_LANGUAGE: deu+eng
+              PAPERLESS_OCR_MODE: skip
+              PAPERLESS_OCR_USER_ARGS: '{"invalidate_digital_signatures": true}'
+              #PAPERLESS_OCR_SKIP_ARCHIVE_FILE: with_text
+              # Configure redis integration
+              PAPERLESS_REDIS: redis://paperless-redis:6379
+              # Configure admin user
+              PAPERLESS_ADMIN_USER:
+                valueFrom:
+                  secretKeyRef:
+                    name: paperless-secret
+                    key: PAPERLESS_ADMIN_USER
+              PAPERLESS_ADMIN_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: paperless-secret
+                    key: PAPERLESS_ADMIN_PASSWORD
+            resources:
+              requests:
+                cpu: 500m
+                memory: 700M
+              limits:
+                memory: 2000M
+    service:
+      app:
+        controller: app
+        ports:
+          http:
+            port: &port 8080
+    ingress:
+      app:
+        enabled: true
+        className: nginx-default
+        annotations:
+          hajimari.io/icon: material-symbols:scanner-outline
+          nginx.ingress.kubernetes.io/auth-method: GET
+          nginx.ingress.kubernetes.io/auth-url: https://auth.${SECRET_DOMAIN}/api/verify
+          nginx.ingress.kubernetes.io/auth-signin: https://auth.${SECRET_DOMAIN}?rm=$request_method
+          nginx.ingress.kubernetes.io/auth-response-headers: Remote-User,Remote-Name,Remote-Groups,Remote-Email
+          nginx.ingress.kubernetes.io/auth-snippet: |
+            proxy_set_header X-Forwarded-Method $request_method;
+            proxy_set_header X-Forwarded-Scheme $scheme;
+        hosts:
+          - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: app
+                  port: http
+        tls:
+          - hosts:
+              - *host
+            secretName: ${SECRET_DOMAIN/./-}-production-tls
+      public:
+        enabled: true
+        className: nginx-default
+        annotations:
+          external-dns.alpha.kubernetes.io/target: ${SECRET_DNS_TARGET}
+        hosts:
+          - host: &host2 "documents.${SECRET_CH_DOMAIN}"
+            paths:
+              - path: /share
+                pathType: Prefix
+                service:
+                  identifier: app
+                  port: http
+        tls:
+          - hosts:
+              - *host2
+            secretName: ${SECRET_CH_DOMAIN/./-}-production-tls
+    persistence:
+      nfs:
+        type: nfs
+        server: 10.20.30.40
+        path: /volume2/scanner

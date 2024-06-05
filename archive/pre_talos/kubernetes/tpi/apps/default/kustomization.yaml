@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - code-server/ks.yaml
+  - dashy/ks.yaml
+  - drop/ks.yaml
+  - echo-server/ks.yaml
+  - hajimari/ks.yaml
+  - jdownloader/ks.yaml
+  - kasm/ks.yaml
+  - linkding/ks.yaml
+  - octoprint/ks.yaml
+  - paperless/ks.yaml
+  - sharry/ks.yaml
+  - smtp-relay/ks.yaml
+  - webtrees/ks.yaml

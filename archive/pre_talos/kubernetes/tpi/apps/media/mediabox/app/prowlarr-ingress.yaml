@@ -1,0 +1,32 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prowlarr
+  annotations:
+    nginx.ingress.kubernetes.io/auth-method: GET
+    nginx.ingress.kubernetes.io/auth-url: https://auth.${SECRET_DOMAIN}/api/verify
+    nginx.ingress.kubernetes.io/auth-signin: https://auth.${SECRET_DOMAIN}?rm=$request_method
+    nginx.ingress.kubernetes.io/auth-response-headers: Remote-User,Remote-Name,Remote-Groups,Remote-Email
+    nginx.ingress.kubernetes.io/auth-snippet: |
+      proxy_set_header X-Forwarded-Method $request_method;
+      proxy_set_header X-Forwarded-Scheme $scheme;
+    hajimari.io/enable: "true"
+    hajimari.io/icon: plex
+spec:
+  ingressClassName: nginx-default
+  tls:
+    - secretName: ${SECRET_DOMAIN/./-}-production-tls
+      hosts:
+        - prowlarr.${SECRET_DOMAIN}
+  rules:
+    - host: prowlarr.${SECRET_DOMAIN}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mediabox
+                port:
+                  name: prowlarr

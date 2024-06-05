@@ -1,0 +1,23 @@
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Backup
+metadata:
+  name: mariadb
+spec:
+  mariaDbRef:
+    name: mariadb
+  schedule:
+    cron: 1 * * * *
+  maxRetention: 336h # 14 days
+  storage:
+    volume:
+      nfs:
+        server: 10.20.30.40
+        path: /volume2/data/backup/kubernetes/mariadb
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi

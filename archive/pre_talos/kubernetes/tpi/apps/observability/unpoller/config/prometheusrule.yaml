@@ -1,0 +1,104 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: unifi-rules
+spec:
+  groups:
+    - name: unpoller-high-memory
+      rules:
+        - alert: UnPollerMemoryUsage
+          annotations:
+            summary: ">95% memory usage on {{$labels.name}} for the last 15 minutes."
+          expr: unpoller_device_memory_utilization_ratio >= 0.95
+          for: 15m
+          labels:
+            severity: critical
+        - alert: UnPollerCPUUsage
+          annotations:
+            summary: ">95% cpu usage on {{$labels.name}} for the last 15 minutes."
+          expr: unpoller_device_cpu_utilization_ratio >= 0.95
+          for: 15m
+          labels:
+            severity: critical
+        - alert: UnPollerLoad5
+          annotations:
+            summary: "Load 5 > 2 on {{$labels.name}} for the last 15 minutes."
+          expr: unpoller_device_load_average_5 >= 2
+          for: 15m
+          labels:
+            severity: critical
+        - alert: UnPollerAbsent
+          annotations:
+            description: UnPoller has disappeared from Prometheus service discovery.
+            summary: UnPoller is down.
+          expr: |
+            absent(up{job=~".*unpoller.*"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+        - alert: unpoller_device_upgradable
+          annotations:
+            summary: "Device {{$labels.name}} is upgradeable"
+          expr: unpoller_device_upgradable >= 1
+          for: 15m
+          labels:
+            severity: critical
+        - alert: UnPollerUplinkLatency
+          annotations:
+            summary: "Uplink latency > 0.01 on {{$labels.name}} for the last 5 minutes."
+          expr: unpoller_device_uplink_latency_seconds >= 0.01
+          for: 5m
+          labels:
+            severity: critical
+        - alert: UnPollerSpeedtestLatency
+          annotations:
+            summary: "Speedtest latency > 0.01 on {{$labels.name}} for the last 5 minutes."
+          expr: unpoller_device_speedtest_latency_seconds >= 0.01
+          for: 5m
+          labels:
+            severity: critical
+        - alert: UnPollerSpeedtestUpload
+          annotations:
+            summary: "Speedtest Upload < 200 on {{$labels.name}} for the last 15 minutes."
+          expr: unpoller_device_speedtest_upload <= 200
+          for: 15m
+          labels:
+            severity: warning
+        - alert: UnPollerSpeedtestDownload
+          annotations:
+            summary: "Speedtest download < 200 on {{$labels.name}} for the last 15 minutes."
+          expr: unpoller_device_speedtest_download <= 200
+          for: 15m
+          labels:
+            severity: warning
+        - alert: UnPollerWANtransmitDrops
+          annotations:
+            summary: "Increasing transmitting drops on WAN interface on {{$labels.name}} for the last 15 minutes."
+          expr: delta(unpoller_device_wan_transmit_dropped_total[15m]) > 0
+          labels:
+            severity: warning
+        - alert: UnPollerWANtransmitErrors
+          annotations:
+            summary: "Increasing transmitting errors on WAN interface on {{$labels.name}} for the last 15 minutes."
+          expr: delta(unpoller_device_wan_transmit_errors_total[15m]) > 0
+          labels:
+            severity: warning
+        - alert: UnPollerWANReceiveDrops
+          annotations:
+            summary: "Increasing receiving drops on WAN interface on {{$labels.name}} for the last 15 minutes."
+          expr: delta(unpoller_device_wan_receive_dropped_total[15m]) > 0
+          labels:
+            severity: warning
+        - alert: UnPollerWANReceiveErrors
+          annotations:
+            summary: "Increasing receiving errors on WAN interface on {{$labels.name}} for the last 15 minutes."
+          expr: delta(unpoller_device_wan_receive_errors_total[15m]) > 0
+          labels:
+            severity: warning
+        - alert: UnPollerDeviceRebooted
+          annotations:
+            summary: "Device {{$labels.name}} has been rebooted in the last 24 hours."
+          expr: delta(unpoller_device_uptime_seconds[24h]) < 0
+          labels:
+            severity: warning

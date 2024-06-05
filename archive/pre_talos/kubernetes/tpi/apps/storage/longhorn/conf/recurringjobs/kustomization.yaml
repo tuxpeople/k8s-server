@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: longhorn-system
+resources:
+  - 30min-snapshot.yaml
+  - daily-backup.yaml
+  - daily-cleanup.yaml
+  - daily-delete.yaml
+  - daily-trim.yaml
+  - hourly-backup.yaml

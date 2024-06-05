@@ -1,0 +1,56 @@
+---
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: MariaDB
+metadata:
+  name: mariadb
+spec:
+  rootPasswordSecretKeyRef:
+    name: mariadb
+    key: root-password
+    generate: false
+  image: mariadb:11.4.2
+  port: 3306
+  replicas: 2
+  replication:
+    enabled: true
+  env:
+    - name: TZ
+      value: ${TIMEZONE}
+  storage:
+    size: 10Gi
+    volumeClaimTemplate:
+      storageClassName: ${MAIN_SC}
+      resources:
+        requests:
+          storage: 10Gi
+      accessModes:
+        - ReadWriteOnce
+  resources:
+    requests:
+      cpu: 35m
+      memory: 145M
+    limits:
+      cpu: 500m
+      memory: 750M
+  metrics:
+    enabled: true
+    exporter:
+      image: prom/mysqld-exporter:v0.15.1
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 300m
+          memory: 512Mi
+    serviceMonitor:
+      interval: 10s
+      scrapeTimeout: 10s
+  myCnf: |
+    [mariadb]
+    bind-address=*
+    default_storage_engine=InnoDB
+    binlog_format=row
+    innodb_autoinc_lock_mode=2
+    max_allowed_packet=256M

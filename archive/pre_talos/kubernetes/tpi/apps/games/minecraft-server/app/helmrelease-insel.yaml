@@ -1,0 +1,151 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app minecraft-server-insel
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: minecraft-bedrock
+      version: 2.8.0
+      sourceRef:
+        kind: HelmRepository
+        name: minecraft-server-charts
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    persistence:
+      storageClass: ${MAIN_SC}
+      dataDir:
+        enabled: true
+        Size: 5Gi
+    resources:
+      requests:
+        cpu: 750m
+        memory: 750Mi
+      limits:
+        memory: 3Gi
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 120
+      periodSeconds: 5
+      failureThreshold: 10
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 120
+      periodSeconds: 5
+      failureThreshold: 10
+    startupProbe:
+      enabled: true
+      failureThreshold: 120
+      periodSeconds: 10
+      initialDelaySeconds: 120
+    extraEnv:
+      ENABLE_AUTOPAUSE: false
+      TZ: ${TIMEZONE}
+    # podAnnotations:
+    #   configmap.reloader.stakater.com/reload: mc-backup-configmap
+    minecraftServer:
+      eula: "TRUE"
+      version: LATEST
+      enableLanVisibility: false
+      levelSeed: "-1671764914"
+      serviceType: LoadBalancer
+      loadBalancerIP: ${CILIUM_LB_MINECRAFT4_ADDR}
+      externalTrafficPolicy: Cluster
+      onlineMode: false
+      gameMode: creative
+      # The world is ticked this many chunks away from any player.
+      tickDistance: 8
+      # Max view distance (in chunks).
+      viewDistance: 10
+      difficulty: peaceful
+      icon: https://www.freeiconspng.com/uploads/minecraft-server-icon-13.png
+      serverName: Thomas' Insel Server
+      levelName: insel
+      # memory: 2048M
+      enableSSH: true
+    rcon:
+      enabled: false
+    extraVolumes:
+      - volumeMounts:
+        volumes:
+          - name: nfs
+            nfs:
+              server: 10.20.30.40
+              path: /volume2/data/backup/kubernetes/mc-backup/test
+          - name: backup-config
+            configMap:
+              name: minecraft-server-insel-backup
+    extraDeploy:
+      - |
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: minecraft-server-insel-backup
+        data:
+          config.yml: |
+            schedule:
+              onPlayerLogin: true
+              onPlayerLogout: true
+              minInterval: 1h
+              startupDelay: 5m
+
+            trim:
+              trimDays: 2
+              keepDays: 14
+              minKeep: 2
+
+            containers:
+              bedrock:
+                - name: minecraft-server-insel
+                  # The hostname here is the name of the service in the compose YML.
+                  ssh: 127.0.0.1:2222
+                  # itzg writes out the password as yaml to the root of /data
+                  passwordFile: /data/.remote-console.yaml
+                  worlds:
+                    - /data/worlds/insel
+            loggingLevel: debug
+  postRenderers:
+    # Instruct helm-controller to use built-in "kustomize" post renderer.
+    - kustomize:
+        patchesJson6902:
+          - patch:
+              - op: add
+                path: /spec/template/spec/containers/-
+                value:
+                  image: registry.eighty-three.me/tuxpeople/bedrockifier:rolling
+                  imagePullPolicy: Always
+                  name: backup
+                  resources: {}
+                  env:
+                    - name: TZ
+                      value: ${TIMEZONE}
+                  volumeMounts:
+                    - mountPath: /data
+                      name: datadir
+                    - mountPath: /backups
+                      name: nfs
+                    - name: backup-config
+                      mountPath: /backups/config.yml
+                      subPath: config.yml
+                      defaultMode: 0444
+                      readOnly: true
+            target:
+              kind: Deployment
+              name: minecraft-server-insel-minecraft-bedrock

@@ -1,0 +1,199 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app linkding
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: 3.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    crds: CreateReplace
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          enableServiceLinks: false
+        containers:
+          main:
+            image:
+              repository: sissbruecker/linkding
+              tag: 1.30.0
+            resources:
+              requests:
+                cpu: 12m
+                memory: 64M
+              limits:
+                memory: 256M
+            env:
+              TZ: ${TIMEZONE}
+              LD_SUPERUSER_NAME: tdeutsch
+              LD_ENABLE_AUTH_PROXY: "True"
+              LD_AUTH_PROXY_USERNAME_HEADER: "HTTP_REMOTE_USER"
+              LD_AUTH_PROXY_LOGOUT_URL: "https://auth.eighty-three.me/"
+              # to use a db see https://github.com/bjw-s/home-ops/blob/main/kubernetes/apps/selfhosted/linkding/app/helmrelease.yaml
+          litestream: &ls
+            image:
+              repository: "docker.io/litestream/litestream"
+              tag: "0.3.13"
+            args: ["replicate"]
+            env: &lsenv
+              LITESTREAM_ACCESS_KEY_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: "linkding-secrets"
+                    key: "litestream-minio-id"
+              LITESTREAM_SECRET_ACCESS_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: "linkding-secrets"
+                    key: "litestream-minio-key"
+              MINIO_ENDPOINT:
+                valueFrom:
+                  secretKeyRef:
+                    name: "linkding-secrets"
+                    key: "litestream-minio-endpoint"
+              MINIO_BUCKET:
+                valueFrom:
+                  secretKeyRef:
+                    name: "linkding-secrets"
+                    key: "litestream-minio-bucket"
+              AGE_PUBKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: "linkding-secrets"
+                    key: "litestream-age-pubkey"
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 1024Mi
+        initContainers:
+          01-litestream-restore:
+            <<: *ls
+            args:
+              [
+                "restore",
+                "-if-db-not-exists",
+                "-if-replica-exists",
+                "/etc/linkding/data/db.sqlite3",
+              ]
+            env:
+              <<: *lsenv
+              AGE_SECRET:
+                valueFrom:
+                  secretKeyRef:
+                    name: "linkding-secrets"
+                    key: "litestream-age-secret"
+    service:
+      app:
+        controller: app
+        ports:
+          http:
+            port: &port 9090
+    ingress:
+      app:
+        enabled: true
+        className: nginx-default
+        annotations:
+          nginx.ingress.kubernetes.io/auth-method: GET
+          nginx.ingress.kubernetes.io/auth-url: https://auth.${SECRET_DOMAIN}/api/verify
+          nginx.ingress.kubernetes.io/auth-signin: https://auth.${SECRET_DOMAIN}?rm=$request_method
+          nginx.ingress.kubernetes.io/auth-response-headers: Remote-User,Remote-Name,Remote-Groups,Remote-Email
+          nginx.ingress.kubernetes.io/auth-snippet: |
+            proxy_set_header X-Forwarded-Method $request_method;
+            proxy_set_header X-Forwarded-Scheme $scheme;
+          external-dns.alpha.kubernetes.io/target: ${SECRET_DNS_TARGET}
+          hajimari.io/icon: "mdi:link-variant"
+        hosts:
+          - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: app
+                  port: *port
+        tls:
+          - hosts:
+              - *host
+            secretName: ${SECRET_DOMAIN/./-}-production-tls
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        storageClass: ${MAIN_SC}
+        globalMounts:
+          - path: /etc/linkding/data
+      config:
+        enabled: true
+        type: configMap
+        name: "linkding-config"
+        advancedMounts:
+          app:
+            litestream:
+              - &lsmnt
+                subPath: "litestream-replicate"
+                path: "/etc/litestream.yml"
+                readOnly: true
+            01-litestream-restore:
+              - <<: *lsmnt
+                subPath: "litestream-restore"
+    configMaps:
+      config:
+        enabled: true
+        data:
+          litestream-replicate: |
+            dbs:
+              - path: /etc/linkding/data/db.sqlite3
+                replicas:
+                  - name: "minio"
+                    type: "s3"
+                    endpoint: "$${MINIO_ENDPOINT}"
+                    bucket: "$${MINIO_BUCKET}"
+                    path: "linkding"
+                    force-path-style: true
+                    retention: 168h
+                    validation-interval: 24h
+                    age:
+                      recipients:
+                        - $${AGE_PUBKEY}
+          litestream-restore: |
+            dbs:
+              - path: /etc/linkding/data/db.sqlite3
+                replicas:
+                  - name: "minio"
+                    type: "s3"
+                    endpoint: "$${MINIO_ENDPOINT}"
+                    bucket: "$${MINIO_BUCKET}"
+                    path: "linkding"
+                    force-path-style: true
+                    retention: 168h
+                    validation-interval: 24h
+                    age:
+                      identities:
+                        - $${AGE_SECRET}
