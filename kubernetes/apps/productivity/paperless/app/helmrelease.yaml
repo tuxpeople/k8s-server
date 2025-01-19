@@ -34,7 +34,7 @@ spec:
           main:
             image:
               repository: ghcr.io/paperless-ngx/paperless-ngx
-              tag: 2.13.5
+              tag: 2.14.4
             env:
               PAPERLESS_SECRET_KEY:
                 valueFrom:
